@@ -5,11 +5,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.EventObject;
 
+import glt.NIO.MessageHeader;
 import glt.NIO.RecvMessageEvent;
 import glt.NIO.TcpClient;
 import glt.NIO.TcpClientListener;
+import glt.NIO.TcpPeer;
 import glt.NIO.TcpPeerEvent;
 import glt.NIO.TcpPeerListener;
 import glt.NIO.TcpServer;
@@ -47,7 +50,11 @@ public class glt implements TcpClientListener, TcpServerListener{
 		{
 			showHelp();
 			try {
-				String cmd = br.readLine();
+				String line = br.readLine();
+				String[] args = line.split(" ");
+				if(args.length<=0)
+					continue;
+				String cmd = args[0];
 				if(cmd.trim().equals("start")){
 					if(!server.IsOpen()){
 						try {
@@ -63,6 +70,18 @@ public class glt implements TcpClientListener, TcpServerListener{
 						System.out.println("服务器停止...");
 						server.close();
 					}
+				}
+				else if(cmd.trim().equals("client")){
+					MessageHeader head = new MessageHeader();
+					head.setID(0);
+					head.setIndex(1);
+					head.setBodySize(10);
+					ByteBuffer  body = ByteBuffer.allocate(10);
+					for(int i=0;i<body.capacity();i++){
+						body.put((byte)i);
+					}
+						
+					client.write(head, body);
 				}
 				else{
 					System.out.println("指令无效");
@@ -107,13 +126,28 @@ public class glt implements TcpClientListener, TcpServerListener{
 	@Override
 	public void OnMessage(RecvMessageEvent e) {
 		System.out.println("客户端接收消息");
+		System.out.println("ID : "+String.valueOf(e.getHeader().getID()));
+		System.out.println("Index : "+String.valueOf(e.getHeader().getIndex()));
+		System.out.println("Flag : "+String.valueOf(e.getHeader().getFlag()));
+		System.out.println("Param : "+String.valueOf(e.getHeader().getParam()));
+		System.out.println("BodySize : "+String.valueOf(e.getHeader().getBodySize()));
+		System.out.println("Body : "+String.valueOf(e.getBody()));
+		
 	}
 	
 	public class PeerListener implements TcpPeerListener{
 
 		@Override
 		public void OnMessage(RecvMessageEvent e) {
-			System.out.println("服务器接收消息");
+			TcpPeer peer = (TcpPeer)e.getSource();
+
+			System.out.println("服务器接收消息, "+peer.getName());
+			try {
+				peer.write(e.getHeader(), e.getBody());
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}		
 		}
 	}
 

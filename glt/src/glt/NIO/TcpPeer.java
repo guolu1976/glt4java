@@ -2,6 +2,7 @@ package glt.NIO;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -12,7 +13,6 @@ import javax.swing.event.EventListenerList;
 
 public class TcpPeer extends TcpClientBase {
 	
-	private SocketChannel _channel = null;
 	private String _name;
 	private Date _recvTimeStamp ;
 	
@@ -67,7 +67,7 @@ public class TcpPeer extends TcpClientBase {
     }
     
     @Override
-	protected void fireOnMessage(MessageHeader header, byte[] body) 
+	protected void fireOnMessage(MessageHeader header, ByteBuffer body) 
 	{ 
 		RecvMessageEvent e=new RecvMessageEvent(this, header, body); 
 		synchronized(this) {

@@ -2,17 +2,24 @@ package glt.NIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 
 public abstract class TcpClientBase {
 	
-	SocketChannel _channel = null;
+	protected SocketChannel _channel = null;
+	ByteBuffer _msgHeader = ByteBuffer.allocate(MessageHeader.getSize());
+	ByteBuffer _msgBody = ByteBuffer.allocate(1024);
 	
+	public TcpClientBase(){
+		_msgHeader.order(ByteOrder.LITTLE_ENDIAN);
+		_msgBody.order(ByteOrder.LITTLE_ENDIAN);
+	}
 	public synchronized void write(MessageHeader header, ByteBuffer body) throws IOException
 	{
-		_channel.write(header.getByteBuffer());
-		if((body!=null) && (body.position()>0))
-			_channel.write(body);
+		write(header.getByteBuffer());
+		if((body!=null) && (body.limit()>0))
+			write(body);
 	}
 	
 	public synchronized void write(ByteBuffer[] srcs, int offset, int length) throws IOException
@@ -20,8 +27,18 @@ public abstract class TcpClientBase {
 		_channel.write(srcs, offset, length);
 	}
 	
-	ByteBuffer _msgHeader = ByteBuffer.allocate(MessageHeader.getSize());
-	ByteBuffer _msgBody = ByteBuffer.allocate(1024);
+	protected void write(ByteBuffer buffer) throws IOException{
+		buffer.rewind();
+		int count = 0;
+		int size = buffer.limit();
+		while(count!=size){
+			int write = _channel.write(buffer);
+			count += write;
+		}
+			
+	}
+	
+	
 	protected void readMessage() throws IOException
 	{
 		while(true)
@@ -46,6 +63,7 @@ public abstract class TcpClientBase {
 				if(_msgBody.capacity()<header.getBodySize())
 				{
 					_msgBody = ByteBuffer.allocate(header.getBodySize());
+					_msgBody.order(ByteOrder.LITTLE_ENDIAN);
 				}
 				
 				_msgBody.limit(header.getBodySize());
@@ -59,10 +77,15 @@ public abstract class TcpClientBase {
 				if(_msgBody.position()<header.getBodySize())
 					break;
 			}
+			else
+			{
+				_msgBody.limit(0);
+			}
 
 			try
 			{
-				fireOnMessage(header, _msgBody.array());
+				_msgBody.flip();
+				fireOnMessage(header, _msgBody);
 			}
 			finally
 			{
@@ -72,5 +95,5 @@ public abstract class TcpClientBase {
 		}
 	}
 	
-	protected abstract void fireOnMessage(MessageHeader head, byte[] body);
+	protected abstract void fireOnMessage(MessageHeader head, ByteBuffer body);
 }

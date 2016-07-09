@@ -1,6 +1,7 @@
 package glt.NIO;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class MessageHeader {
 	
@@ -9,9 +10,13 @@ public class MessageHeader {
 	private byte _flag; //body encode 0-binary 1-xml 2-json
 	private int _param;
 	private int _bodySize;//unsigned short
+	public MessageHeader(){
+		
+	}
 	
 	public MessageHeader(ByteBuffer buffer)	{
 		buffer.flip();
+		
 		_id = buffer.getInt();
 		_index = buffer.getInt();
 		_flag = buffer.get();
@@ -21,9 +26,11 @@ public class MessageHeader {
 	
 	public ByteBuffer getByteBuffer(){
 		ByteBuffer buff =  ByteBuffer.allocate(getSize());
+		buff.order(ByteOrder.LITTLE_ENDIAN);
 		buff.putInt(_id);
 		buff.putInt(_index);
 		buff.put(_flag);
+		buff.putInt(_param);
 		buff.putShort((short)_bodySize);
 		
 		return buff;
