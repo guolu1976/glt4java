@@ -34,8 +34,8 @@ public class glt implements TcpClientListener, TcpServerListener{
 		client = new TcpClient();
 		client.addListener(this);
 		try {
-			client.Open(new InetSocketAddress("123.206.101.55", 9000));
-			//client.Open(new InetSocketAddress("localhost", 9000));
+			//client.Open(new InetSocketAddress("123.206.101.55", 9000));
+			client.Open(new InetSocketAddress("localhost", 9000));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -52,7 +52,7 @@ public class glt implements TcpClientListener, TcpServerListener{
 					if(!server.IsOpen()){
 						try {
 							System.out.println("服务器启动...");
-							server.open(1000);
+							server.open(9000);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -83,13 +83,13 @@ public class glt implements TcpClientListener, TcpServerListener{
 	PeerListener _peerListener = new PeerListener();
 	@Override
 	public void OnConnected(TcpPeerEvent e) {
-		System.out.println("服务器接入客户端");
+		System.out.println("服务器接入客户端, "+e.getTcpPeer().getName());
 		e.getTcpPeer().addListener(_peerListener);
 	}
 
 	@Override
 	public void OnDisconnected(TcpPeerEvent e) {
-		System.out.println("服务器断开客户端");
+		System.out.println("服务器断开客户端"+e.getTcpPeer().getName());
 		e.getTcpPeer().removeListener(_peerListener);
 	}
 
@@ -115,5 +115,10 @@ public class glt implements TcpClientListener, TcpServerListener{
 		public void OnMessage(RecvMessageEvent e) {
 			System.out.println("服务器接收消息");
 		}
+	}
+
+	@Override
+	public void OnException(Exception e) {
+		e.printStackTrace();
 	}
 }

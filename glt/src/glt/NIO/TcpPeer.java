@@ -1,92 +1,53 @@
 package glt.NIO;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Date;
 
 import javax.swing.event.EventListenerList;
 
 
-public class TcpPeer {
+public class TcpPeer extends TcpClientBase {
 	
 	private SocketChannel _channel = null;
+	private String _name;
+	private Date _recvTimeStamp ;
 	
-	public TcpPeer(Selector selector, SocketChannel channel) throws IOException
-	{
-	    // 设置成非阻塞  
+	public TcpPeer(Selector selector, SocketChannel channel, String name) throws IOException	{
 	    channel.configureBlocking(false);  
-	    //在和客户端连接成功之后，为了可以接收到客户端的信息，�?要给通道设置读的权限�?  
 	    SelectionKey key = channel.register(selector, SelectionKey.OP_READ);
 	    key.attach(this);
-	    
 	    _channel = channel;
+	    _name = name;
+	    set_recvTimeStamp(new Date());
 	}
 	
-	public void close()
-	{
+	public void close()	{
 		synchronized(this){
-			
+			if(_channel==null)
+				return;
+			try {
+				_channel.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			_channel = null;
 		}
 	}
 	
-	public void write(ByteBuffer[] srcs, int offset, int length) throws IOException
-	{
-		_channel.write(srcs, offset, length);
+	public String getName(){
+		return _name;
 	}
 	
-	ByteBuffer _msgHeader = ByteBuffer.allocate(MessageHeader.getSize());//TODO:接收缓存大小
-	ByteBuffer _msgBody = ByteBuffer.allocate(1024);
-	public void doRead() throws IOException
-	{
-		//TODO:数据解析异常，关闭socket
-		while(true)
-		{
-			int recv = 0;
-			if(_msgHeader.hasRemaining())
-			{
-				recv = _channel.read(_msgHeader);
-			}
-			if(recv==0)
-				break;
-			if(recv<0)
-				throw new IOException();
-			
-			if(_msgHeader.position()<_msgHeader.limit())
-				break;
-			
-			MessageHeader header = new MessageHeader(_msgHeader);
-			
-			if(header.getBodySize()>0)
-			{
-				if(_msgBody.capacity()<header.getBodySize())
-				{
-					_msgBody = ByteBuffer.allocate(header.getBodySize());
-				}
-				
-				_msgBody.limit(header.getBodySize());
-				
-				recv = _channel.read(_msgBody);
-				
-				if(recv==0)
-					break;
-				if(recv<0)
-					throw new IOException();
-				if(_msgBody.position()<header.getBodySize())
-					break;
-			}
-
-			try
-			{
-				fireOnMessage(header, _msgBody.array());
-			}
-			finally
-			{
-				_msgHeader.clear();
-				_msgBody.clear();
-			}
-		}
+	public SocketAddress getRemoteAddress() throws IOException{
+		return _channel.getRemoteAddress();
+	}
+	
+	public void doRead() throws IOException {
+		super.readMessage();
 	}
 	
 	
@@ -101,13 +62,11 @@ public class TcpPeer {
 		_listenerList.remove(TcpPeerListener.class, l); 
 	}
 	
-	/**
-     * @return 在此对象上监听的�?有MyListener类型的监听器
-     */
     protected TcpPeerListener[] getTcpPeerListeners(){
         return (TcpPeerListener[])_listenerList.getListeners(TcpPeerListener.class);
     }
     
+    @Override
 	protected void fireOnMessage(MessageHeader header, byte[] body) 
 	{ 
 		RecvMessageEvent e=new RecvMessageEvent(this, header, body); 
@@ -117,7 +76,17 @@ public class TcpPeer {
 				TcpPeerListener l= listeners[i]; 
 				l.OnMessage(e);
 			}
+			
+			set_recvTimeStamp(new Date());
 		}
+	}
+
+	public Date get_recvTimeStamp() {
+		return _recvTimeStamp;
+	}
+
+	public void set_recvTimeStamp(Date recvTimeStamp) {
+		this._recvTimeStamp = recvTimeStamp;
 	}
 }
 
