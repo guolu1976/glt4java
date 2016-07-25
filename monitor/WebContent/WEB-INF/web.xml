@@ -27,6 +27,6 @@
 	        <param-value>9000</param-value>
     	</init-param>
         <!-- 初始化时加载 -->
-        <load-on-startup>1</load-on-startup>
+        <load-on-startup>0</load-on-startup>
   </servlet>
 </web-app>
