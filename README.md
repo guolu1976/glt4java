@@ -3,7 +3,7 @@
 java学习，常用接口api封装
 
 # TODO
-- 使用tomcat作为tcp服务容器，servlet不能随tomcat启动加载！
+- 增加websocket接口，用于网页chat
 
 
 # NIO
